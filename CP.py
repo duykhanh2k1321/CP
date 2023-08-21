@@ -21,9 +21,9 @@ th4 = 21
 
 ''' Define variables '''
 reader = None
-pin_input = default
 default_pin_len = 6
 default_pin = "      "
+pin_input = default_pin
 
 ''' Define keypads '''
 KEYPAD = [ [1, 2, 3, "A"], [4, 5, 6, "B"], [7, 8, 9, "C"], ["*", 0, "#", "D"] ]
@@ -185,7 +185,7 @@ def rfid_check(rfid_input):
 def pin_check(pin_input):
     pin_error = False
     try:
-        pin_recieve = requests.post(url, json = {"pin_data": pin_code}, timeout = 5)
+        pin_recieve = requests.post(url, json = {"pin_code": pin_code}, timeout = 5)
     except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
         pin_error = True
