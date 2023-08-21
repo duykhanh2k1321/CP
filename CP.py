@@ -185,7 +185,7 @@ def rfid_check(rfid_input):
 def pin_check(pin_input):
     pin_error = False
     try:
-        pin_recieve = requests.post(url, json = {"pin_data": pin_data}, timeout = 5)
+        pin_recieve = requests.post(url, json = {"pin_data": pin_code}, timeout = 5)
     except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
         pin_error = True
