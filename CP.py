@@ -34,21 +34,18 @@ COL_PINS = [24, 25,  7,  1] # BCM numbering
 GPIO.setwarnings(False)
 
 ''' Cleanup function when the program is terminated '''
-def cleaup(signal, frame):
+def cleaup():
     print(" captured, exiting")
     print("Cleaning up GPIO before exiting")
     GPIO.cleanup()
     sys.exit()
-    
-''' Hook function when the program is terminated '''
-signal.signal(signal.SIGINT, cleanup)
 
 ''' Initialize pins and rfid reader '''
 def setup():
     global reader
     GPIO.setwarnings(False)
     reader = SimpleMFRC522()
-    GPIO.setmode(GPIO.BOARD)
+    GPIO.setmode(GPIO.BCM)
     GPIO.setup(th1, GPIO.OUT, 0)
     GPIO.setup(th2, GPIO.OUT, 0)
     GPIO.setup(th3, GPIO.OUT, 1)
@@ -58,7 +55,7 @@ def setup():
 def init_keypad_driver():
     factory = rpi_gpio.KeypadFactory()
     keypad = factory.create_keypad(keypad=KEYPAD,row_pins=ROW_PINS, col_pins=COL_PINS) 
-    keypad.registerKeyPressHandler(handle_keypad_press, scan_rfid)
+    keypad.registerKeyPressHandler(scan_rfid, scan_pin, main)
 
 ''' Reset outputs '''
 def reset_outputs():
@@ -111,32 +108,41 @@ def latch():
     print("Locking")
     GPIO.output(th3, 1)
     GPIO.output(th4, 0)
+    reset_outputs()
 
 ''' Scan rfid '''
-def scan_rfid():
-    print("Scan RFID card/tag")
-    rfid_input, _ = reader.read()
-    print(f"RFID: {rfid_input}")
-    print("Do not scan RFID card/tag")
-    print("Connecting to REST API Server")
-    print("Checking RFID")
-    rfid_error, rfid_recieve = rfid_check(rfid_input)
-    if rfid_error:
-        return
-    if rfid_recieve:
-        valid_info()
-        print(f"Info: {rfid_recieve}")
+def scan_rfid(press):
+    if press == "*":
+        print(f"{press}")
+        print("Clearing input")
+        print("Back to startup")
+        return main()
     else:
-        invalid_info()
+        print("Scan RFID card/tag")
+        rfid_input, _ = reader.read()
+        print(f"RFID: {rfid_input}")
+        print("Do not scan RFID card/tag")
+        print("Connecting to REST API Server")
+        print("Checking RFID")
+        rfid_error, rfid_recieve = rfid_check(rfid_input)
+        if rfid_error:
+            return
+        if rfid_recieve:
+            valid_info()
+            print(f"Info: {rfid_recieve}")
+        else:
+            invalid_info()
         
 ''' Scan keypad '''  
 def scan_pin(press):
     global pin_input 
     if press == "*":
+        pin_input = default_pin
         print(f"{press}")
         print("Clearing input")
-        pin_input = default_pin
+        print("Back to startup")
         print(f"Input pin: {pin_input}")
+        return main()
     elif press == "#":
         if len(pin_input.strip()) < default_pin_len:
             print("Incomplete pin")
@@ -150,7 +156,7 @@ def scan_pin(press):
         if pin_recieve:
             valid_info()
             print(f"Info: {pin_recieve}")
-            input_key_codes = DEFAULT_INDENT
+            input_key_codes = default_pin
             print(f"Input pin: {pin_input}")
         else:
             invalid_info()
@@ -168,7 +174,7 @@ def scan_pin(press):
 def rfid_check(rfid_input):
     rfid_error = False
     try:
-        rfid_recieve = requests.post(API_URL, json = {"rfid_data": rfid_data}, timeout = 5)
+        rfid_recieve = requests.post(url, json = {"rfid_data": rfid_data}, timeout = 5)
     except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
         rfid_error = True
@@ -176,12 +182,42 @@ def rfid_check(rfid_input):
     return rfid_error, rfid_recieve.json()
         
 ''' Get pin data '''        
-def pin_check(rfid_input):
+def pin_check(pin_input):
     pin_error = False
     try:
-        pin_recieve = requests.post(API_URL, json = {"pin_data": pin_data}, timeout = 5)
+        pin_recieve = requests.post(url, json = {"pin_data": pin_data}, timeout = 5)
     except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
         pin_error = True
         return pin_error, False
     return pin_error, pin_recieve.json()
+
+''' Choose in/out option '''
+def in_out_opt(press):
+    match press:
+        case "A":
+            checkin()
+        case "B":
+            checkout()
+
+''' Choose pin/rfid oftion '''
+def pin_rfid_opt(press):
+    match press:
+        case "C":
+            scan_pin()
+        case "D":
+            scan_rfid()
+
+def main():
+    global reader
+    setup()
+    in_out_opt
+    pin_rfid_opt
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        cleanup()
