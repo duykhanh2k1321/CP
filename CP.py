@@ -8,7 +8,7 @@ from pad4pi import rpi_gpio
 from mfrc522 import SimpleMFRC522
 
 ''' api_url '''
-url = ""
+url = "https://2c38-2a09-bac5-d46c-16dc-00-247-4f.ngrok-free.app/api/hardware/check-for-l1"
 
 ''' Define pins '''
 ''' th1: red_led_1 + buzzer, th2: green_led + buzzer, th3: red_led_2, th4: lock_control_block '''
@@ -32,7 +32,6 @@ COL_PINS = [24, 25,  7,  1] # BCM numbering
 ''' Cleanup function when the program is terminated '''
 def cleanup():
     global reading
-    print("")
     print("Ctr+C captured, exiting")
     print("Cleaning up GPIO before exiting")
     print("")
@@ -45,10 +44,10 @@ def setup():
     global reader
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
-    GPIO.setup(th1, GPIO.OUT, initial = 0)
-    GPIO.setup(th2, GPIO.OUT, initial = 0)
-    GPIO.setup(th3, GPIO.OUT, initial = 1)
-    GPIO.setup(th4, GPIO.OUT, initial = 0)
+    GPIO.setup(th1, GPIO.OUT, initial = False)
+    GPIO.setup(th2, GPIO.OUT, initial = False)
+    GPIO.setup(th3, GPIO.OUT, initial = True)
+    GPIO.setup(th4, GPIO.OUT, initial = False)
     reader = SimpleMFRC522()
     
 ''' Initializes keypad driver '''
@@ -61,28 +60,31 @@ def init_keypad_driver():
 def reset_outputs():
     print("Reset outputs")
     print("")
-    GPIO.output(th1, 0)
-    GPIO.output(th2, 0)
-    GPIO.output(th3, 1)
-    GPIO.output(th4, 0)
+    GPIO.output(th1, False)
+    GPIO.output(th2, False)
+    GPIO.output(th3, True)
+    GPIO.output(th4, False)
     
 ''' Make beep_sound_1 '''    
 def beep1():
-    GPIO.output(th1, 1)
+    GPIO.output(th1, True)
     print("th1 on")
+    print("Sleep 0.2")
     sleep(0.2)
-    GPIO.ouput(th1, 0)
+    GPIO.output(th1, GPIO.LOW)
     print("th2 off")
     print("")
     
 ''' Make beep_sound_2 '''    
 def beep2():
     for i in range (1, 5):
-        GPIO.output(th2, 1)
+        GPIO.output(th2, True)
         print("th2 on")
+        print("Sleep 0.5")
         sleep(0.05)
-        GPIO.output(th2, 0)
+        GPIO.output(th2, False)
         print("th2 off")
+        print("Sleep 0.5")
         print("")
         sleep(0.05)
     
@@ -107,32 +109,34 @@ def invalid_info():
 ''' Unlock and lock after 3 seconds '''
 def latch():
     print("Unlocking")
-    GPIO.output(th3, 0)
-    GPIO.output(th4, 1)
+    GPIO.output(th3, False)
+    GPIO.output(th4, True)
     sleep(3)
     print("Locking")
     print("")
-    GPIO.output(th3, 1)
-    GPIO.output(th4, 0)
+    GPIO.output(th3, True)
+    GPIO.output(th4, False)
     reset_outputs()
 
 ''' Scan rfid '''
 def scan_rfid():
     print("Scan RFID card/tag")
+    print("")
     rfid_input, _ = reader.read()
     print(f"RFID: {rfid_input}")
     print("Do not scan RFID card/tag")
     print("Connecting to REST API Server")
     print("Checking RFID")
+    print("")
     sleep (1)
     rfid_error, rfid_recieve = rfid_check(rfid_input)
     if rfid_error:
         return
     if rfid_recieve:
+        print(f"Info: {rfid_recieve.text}")
         valid_info()
-        print(f"Info: {rfid_recieve}")
-        print("")
     else:
+        print(f"Info: {rfid_recieve.text}")
         invalid_info()
 
 ''' Get rfid data '''        
@@ -145,7 +149,9 @@ def rfid_check(rfid_input):
         print("")
         rfid_error = True
         return rfid_error, False
-    return rfid_error, rfid_recieve.json()
+    print(rfid_recieve.text)
+    print("")
+    return rfid_error, rfid_recieve
 
 def main():
     global reader
