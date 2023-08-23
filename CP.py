@@ -1,7 +1,5 @@
 import sys
-import json
 import signal
-import drivers
 import requests
 import RPi.GPIO as GPIO
 
@@ -21,6 +19,7 @@ th4 = 21
 
 ''' Define variables '''
 reader = None
+reading = True
 default_pin_len = 6
 default_pin = "      "
 pin_input = default_pin
@@ -30,36 +29,38 @@ KEYPAD = [ [1, 2, 3, "A"], [4, 5, 6, "B"], [7, 8, 9, "C"], ["*", 0, "#", "D"] ]
 ROW_PINS = [14, 15, 18, 23] # BCM numbering
 COL_PINS = [24, 25,  7,  1] # BCM numbering
 
-''' Setup RPi '''
-GPIO.setwarnings(False)
-
 ''' Cleanup function when the program is terminated '''
-def cleaup():
-    print(" captured, exiting")
+def cleanup():
+    global reading
+    print("")
+    print("Ctr+C captured, exiting")
     print("Cleaning up GPIO before exiting")
+    print("")
     GPIO.cleanup()
+    reading = False
     sys.exit()
 
 ''' Initialize pins and rfid reader '''
 def setup():
     global reader
-    GPIO.setwarnings(False)
-    reader = SimpleMFRC522()
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(th1, GPIO.OUT, 0)
-    GPIO.setup(th2, GPIO.OUT, 0)
-    GPIO.setup(th3, GPIO.OUT, 1)
-    GPIO.setup(th4, GPIO.OUT, 0)
+    GPIO.setwarnings(False)
+    GPIO.setup(th1, GPIO.OUT, initial = 0)
+    GPIO.setup(th2, GPIO.OUT, initial = 0)
+    GPIO.setup(th3, GPIO.OUT, initial = 1)
+    GPIO.setup(th4, GPIO.OUT, initial = 0)
+    reader = SimpleMFRC522()
     
 ''' Initializes keypad driver '''
 def init_keypad_driver():
     factory = rpi_gpio.KeypadFactory()
     keypad = factory.create_keypad(keypad=KEYPAD,row_pins=ROW_PINS, col_pins=COL_PINS) 
-    keypad.registerKeyPressHandler(scan_rfid, scan_pin, main)
+    keypad.registerKeyPressHandler()
 
 ''' Reset outputs '''
 def reset_outputs():
     print("Reset outputs")
+    print("")
     GPIO.output(th1, 0)
     GPIO.output(th2, 0)
     GPIO.output(th3, 1)
@@ -67,26 +68,29 @@ def reset_outputs():
     
 ''' Make beep_sound_1 '''    
 def beep1():
-    GPIO.setup(th1, GPIO.OUT, 1)
+    GPIO.output(th1, 1)
     print("th1 on")
     sleep(0.2)
-    GPIO.setup(th1, GPIO.OUT, 0)
+    GPIO.ouput(th1, 0)
     print("th2 off")
+    print("")
     
 ''' Make beep_sound_2 '''    
 def beep2():
     for i in range (1, 5):
-        GPIO.output(th2, GPIO.OUT, 1)
+        GPIO.output(th2, 1)
         print("th2 on")
         sleep(0.05)
-        GPIO.output(th2, GPIO.OUT, 0)
+        GPIO.output(th2, 0)
         print("th2 off")
+        print("")
         sleep(0.05)
     
 ''' Valid rfid_input/pin_input '''
 def valid_info():
     print("Valid rfid_input/pin_input")
     print("Pass level 1 security")
+    print("")
     reset_outputs()
     beep1()
     reset_outputs()
@@ -95,6 +99,7 @@ def valid_info():
 def invalid_info():
     print("Invalid rfid_input/pin_input")
     print("Not pass level 1 security")
+    print("")
     reset_outputs()
     beep2()
     reset_outputs()
@@ -106,114 +111,48 @@ def latch():
     GPIO.output(th4, 1)
     sleep(3)
     print("Locking")
+    print("")
     GPIO.output(th3, 1)
     GPIO.output(th4, 0)
     reset_outputs()
 
 ''' Scan rfid '''
-def scan_rfid(press):
-    if press == "*":
-        print(f"{press}")
-        print("Clearing input")
-        print("Back to startup")
-        return main()
+def scan_rfid():
+    print("Scan RFID card/tag")
+    rfid_input, _ = reader.read()
+    print(f"RFID: {rfid_input}")
+    print("Do not scan RFID card/tag")
+    print("Connecting to REST API Server")
+    print("Checking RFID")
+    sleep (1)
+    rfid_error, rfid_recieve = rfid_check(rfid_input)
+    if rfid_error:
+        return
+    if rfid_recieve:
+        valid_info()
+        print(f"Info: {rfid_recieve}")
+        print("")
     else:
-        print("Scan RFID card/tag")
-        rfid_input, _ = reader.read()
-        print(f"RFID: {rfid_input}")
-        print("Do not scan RFID card/tag")
-        print("Connecting to REST API Server")
-        print("Checking RFID")
-        rfid_error, rfid_recieve = rfid_check(rfid_input)
-        if rfid_error:
-            return
-        if rfid_recieve:
-            valid_info()
-            print(f"Info: {rfid_recieve}")
-        else:
-            invalid_info()
-        
-''' Scan keypad '''  
-def scan_pin(press):
-    global pin_input 
-    if press == "*":
-        pin_input = default_pin
-        print(f"{press}")
-        print("Clearing input")
-        print("Back to startup")
-        print(f"Input pin: {pin_input}")
-        return main()
-    elif press == "#":
-        if len(pin_input.strip()) < default_pin_len:
-            print("Incomplete pin")
-            print(f"Input pin: {pin_input}")
-            return
-        print("Connecting to REST API Server")
-        print("Checking RFID")
-        pin_error, pin_recieve = pin_check(pin_input)
-        if pin_error:
-            return
-        if pin_recieve:
-            valid_info()
-            print(f"Info: {pin_recieve}")
-            input_key_codes = default_pin
-            print(f"Input pin: {pin_input}")
-        else:
-            invalid_info()
-            pin_input = default_pin
-            print(f"Input pin: {pin_input}")
-    else:
-        if len(pin_input.strip()) == default_pin_len:
-            print("Exceed limit")
-            print(f"Input pin: {pin_input}")
-            return
-        pin_input += str(press)
-        print(f"Input pin: {pin_input}")        
-        
+        invalid_info()
+
 ''' Get rfid data '''        
 def rfid_check(rfid_input):
     rfid_error = False
     try:
-        rfid_recieve = requests.post(url, json = {"rfid_data": rfid_data}, timeout = 5)
+        rfid_recieve = requests.post(url, json = {"rfid_data": rfid_input}, timeout = 5)
     except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
+        print("")
         rfid_error = True
         return rfid_error, False
     return rfid_error, rfid_recieve.json()
-        
-''' Get pin data '''        
-def pin_check(pin_input):
-    pin_error = False
-    try:
-        pin_recieve = requests.post(url, json = {"pin_code": pin_code}, timeout = 5)
-    except requests.exceptions.RequestException as e:
-        print(f"Error: {e}")
-        pin_error = True
-        return pin_error, False
-    return pin_error, pin_recieve.json()
-
-''' Choose in/out option '''
-def in_out_opt(press):
-    match press:
-        case "A":
-            checkin()
-        case "B":
-            checkout()
-
-''' Choose pin/rfid oftion '''
-def pin_rfid_opt(press):
-    match press:
-        case "C":
-            scan_pin()
-        case "D":
-            scan_rfid()
 
 def main():
     global reader
     setup()
-    in_out_opt
-    pin_rfid_opt
-
+    while reading:
+        scan_rfid()
+            
 if __name__ == "__main__":
     try:
         main()
