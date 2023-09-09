@@ -198,8 +198,7 @@ def scan_rfid(press):
             invalid_info()
     else:
         pass
-
-        
+    
 ''' Get rfid data '''        
 def rfid_check(rfid_input):
     rfid_error = False
