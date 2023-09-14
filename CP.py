@@ -111,53 +111,53 @@ def latch():
 
 ''' Initialize keypad driver '''
 def keypad_scan_in_out():
-    global key_0
+    global key0
     factory = rpi_gpio.KeypadFactory()
-    key_0 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
-    key_0.registerKeyPressHandler(scan_in_out)
+    key0 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
+    key0.registerKeyPressHandler(scan_in_out)
 
 def keypad_scan_rfid_pin():
-    global key_1
+    global key1
     factory = rpi_gpio.KeypadFactory()
-    key_1 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
-    key_1.registerKeyPressHandler(scan_rfid_pin)
+    key1 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
+    key1.registerKeyPressHandler(scan_rfid_pin)
     
 def keypad_scan_rfid():
-    global key_2
+    global key2
     factory = rpi_gpio.KeypadFactory()
-    key_2 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
-    key_2.registerKeyPressHandler(scan_rfid)
+    key2 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
+    key2.registerKeyPressHandler(scan_rfid)
     
 def keypad_scan_pin():
-    global key_3
+    global key3
     factory = rpi_gpio.KeypadFactory()
-    key_3 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
-    key_3.registerKeyPressHandler(scan_pin)
+    key3 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
+    key3.registerKeyPressHandler(scan_pin)
     
 ''' Clear keypad driver '''
 def clr_keypad_scan_in_out():
-    global key_0
-    if key_0:
-        key_0.unregisterKeyPressHandler(scan_in_out)
-        key_0 = None
+    global key0
+    if key0:
+        key0.unregisterKeyPressHandler(scan_in_out)
+        key0 = None
 
 def clr_keypad_scan_rfid_pin():
-    global key_1
-    if key_1:
-        key_1.unregisterKeyPressHandler(scan_rfid_pin)
-        key_1 = None
+    global key1
+    if key1:
+        key1.unregisterKeyPressHandler(scan_rfid_pin)
+        key1 = None
 
 def clr_keypad_scan_rfid():
-    global key_2
-    if key_2:
-        key_2.unregisterKeyPressHandler(scan_rfid)
-        key_2 = None
+    global key2
+    if key2:
+        key2.unregisterKeyPressHandler(scan_rfid)
+        key2 = None
         
 def clr_keypad_scan_pin():
-    global key_3
-    if key_3:
-        key_3.unregisterKeyPressHandler(scan_pin)
-        key_3 = None
+    global key3
+    if key3:
+        key3.unregisterKeyPressHandler(scan_pin)
+        key3 = None
 
 ''' Scan rfid '''
 def scan_rfid(press):
