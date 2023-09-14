@@ -110,50 +110,50 @@ def latch():
     reset_outputs()
 
 ''' Initialize keypad driver '''
-def keypad_0():
+def keypad_scan_in_out():
     global key_0
     factory = rpi_gpio.KeypadFactory()
     key_0 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
     key_0.registerKeyPressHandler(scan_in_out)
 
-def keypad_1():
+def keypad_scan_rfid_pin():
     global key_1
     factory = rpi_gpio.KeypadFactory()
     key_1 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
     key_1.registerKeyPressHandler(scan_rfid_pin)
     
-def keypad_2():
+def keypad_scan_rfid():
     global key_2
     factory = rpi_gpio.KeypadFactory()
     key_2 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
     key_2.registerKeyPressHandler(scan_rfid)
     
-def keypad_3():
+def keypad_scan_pin():
     global key_3
     factory = rpi_gpio.KeypadFactory()
     key_3 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
     key_3.registerKeyPressHandler(scan_pin)
     
 ''' Clear keypad driver '''
-def clr_keypad_0():
+def clr_keypad_scan_in_out():
     global key_0
     if key_0:
         key_0.unregisterKeyPressHandler(scan_in_out)
         key_0 = None
 
-def clr_keypad_1():
+def clr_keypad_scan_rfid_pin():
     global key_1
     if key_1:
         key_1.unregisterKeyPressHandler(scan_rfid_pin)
         key_1 = None
 
-def clr_keypad_2():
+def clr_keypad_scan_rfid():
     global key_2
     if key_2:
         key_2.unregisterKeyPressHandler(scan_rfid)
         key_2 = None
         
-def clr_keypad_3():
+def clr_keypad_scan_pin():
     global key_3
     if key_3:
         key_3.unregisterKeyPressHandler(scan_pin)
@@ -166,7 +166,7 @@ def scan_rfid(press):
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        clr_keypad_2()
+        clr_keypad_scan_rfid()
         return main()
     elif press == '#':
         print('Scan RFID card/tag\n')
@@ -181,21 +181,21 @@ def scan_rfid(press):
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            clr_keypad_2()
+            clr_keypad_scan_rfid()
             return main()
         if rfid_recieve:
             print(f'Info: {rfid_recieve.text}')
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            clr_keypad_2()
+            clr_keypad_scan_rfid()
             valid_info()
         else:
             print(f'Info: {rfid_recieve.text}')
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            clr_keypad_2()
+            clr_keypad_scan_rfid()
             invalid_info()
     else:
         pass
@@ -222,7 +222,7 @@ def scan_pin(press):
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        clr_keypad_3()
+        clr_keypad_scan_pin()
         return main()
     elif press == '#':
         if len(pin_input.strip()) < 6:
@@ -237,7 +237,7 @@ def scan_pin(press):
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            clr_keypad_3()
+            clr_keypad_scan_pin()
             return main()
         if pin_recieve:
             pin_input = ''
@@ -245,7 +245,7 @@ def scan_pin(press):
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            clr_keypad_3()
+            clr_keypad_scan_pin()
             valid_info()
         else:
             pin_input = ''
@@ -253,7 +253,7 @@ def scan_pin(press):
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            clr_keypad_3()
+            clr_keypad_scan_pin()
             invalid_info()
     else:
         if len(pin_input.strip()) == 6:
@@ -285,14 +285,14 @@ def scan_in_out(press):
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        clr_keypad_0()
+        clr_keypad_scan_in_out()
         main_rfid_pin()
     elif press == 'B':
         print('Access CHECKOUT mode\n')
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        clr_keypad_0()
+        clr_keypad_scan_in_out()
         main_rfid_pin()
     else:
         pass
@@ -303,14 +303,14 @@ def scan_rfid_pin(press):
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        clr_keypad_1()
+        clr_keypad_scan_rfid_pin()
         main_rfid()
     elif press == 'D':
         print('Access SCAN PIN mode\n')
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        clr_keypad_1()
+        clr_keypad_scan_rfid_pin()
         main_pin()
     elif press == '*':
         print('Back to startup')
@@ -318,7 +318,7 @@ def scan_rfid_pin(press):
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        clr_keypad_1()
+        clr_keypad_scan_rfid_pin()
         return main()
     else:
         pass
@@ -326,26 +326,26 @@ def scan_rfid_pin(press):
 def main_rfid():
     global reader
     print('Press # then scan RFID tag/card - Press * to back to startup\n')
-    keypad_2()
+    keypad_scan_rfid()
     while True:
         sleep(1)
         
 def main_pin():
     print('Press # for checking PIN info - Press * to back to startup')
     print('Press keys to input PIN (except keys: A, B, C, D, #, *)\n')
-    keypad_3()
+    keypad_scan_pin()
     while True:
         sleep(1)
         
 def main_in_out():
-    keypad_0()
+    keypad_scan_in_out()
     while True:
         sleep(1)        
         
 def main_rfid_pin():
     print('Choose mode: SCAN RFID - SCAN PIN')
     print('Press C for SCAN RFID mode - Press D for SCAN PIN mode - Press * to back to startup\n')
-    keypad_1()
+    keypad_scan_rfid_pin()
     while True:
         sleep(1)
         
@@ -420,7 +420,7 @@ class gui:
         self.page2 = tk.Frame(self.win)
         self.page2_l0 = tk.Label(self.page2, font=('Arial', 50))
         self.page2_l0.pack()
-        self.page2_l1 = tk.Label(self.page2, text='CHECKIN', font=('Arial', 50))
+        self.page2_l1 = tk.Label(self.page2, text='CHECKOUT', font=('Arial', 50))
         self.page2_l1.pack()
         self.page2_l2 = tk.Label(self.page2, text='SCAN RFID\nPress C', font=('Arial', 40), bg='green', fg='white')
         self.page2_l2.pack(padx=350, expand=True, fill='x')
