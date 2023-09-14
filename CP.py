@@ -1,10 +1,14 @@
 import sys
 import signal
 import requests
+import threading
+import tkinter as tk
 import RPi.GPIO as GPIO
 
 from time import sleep
+from time import strftime
 from pad4pi import rpi_gpio
+from threading import Thread
 from mfrc522 import SimpleMFRC522
 
 ''' api_url '''
@@ -105,31 +109,32 @@ def latch():
     GPIO.output(th4, 0)
     reset_outputs()
 
-''' Initializes keypad driver '''
+''' Initialize keypad driver '''
 def keypad_0():
     global key_0
     factory = rpi_gpio.KeypadFactory()
-    key_0 = factory.create_keypad(keypad=KEYPAD,row_pins=ROW_PINS, col_pins=COL_PINS) 
+    key_0 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
     key_0.registerKeyPressHandler(scan_in_out)
 
 def keypad_1():
     global key_1
     factory = rpi_gpio.KeypadFactory()
-    key_1 = factory.create_keypad(keypad=KEYPAD,row_pins=ROW_PINS, col_pins=COL_PINS) 
+    key_1 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
     key_1.registerKeyPressHandler(scan_rfid_pin)
     
 def keypad_2():
     global key_2
     factory = rpi_gpio.KeypadFactory()
-    key_2 = factory.create_keypad(keypad=KEYPAD,row_pins=ROW_PINS, col_pins=COL_PINS) 
+    key_2 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
     key_2.registerKeyPressHandler(scan_rfid)
     
 def keypad_3():
     global key_3
     factory = rpi_gpio.KeypadFactory()
-    key_3 = factory.create_keypad(keypad=KEYPAD,row_pins=ROW_PINS, col_pins=COL_PINS) 
+    key_3 = factory.create_keypad(keypad = KEYPAD,row_pins = ROW_PINS, col_pins = COL_PINS) 
     key_3.registerKeyPressHandler(scan_pin)
     
+''' Clear keypad driver '''
 def clr_keypad_0():
     global key_0
     if key_0:
@@ -161,7 +166,6 @@ def scan_rfid(press):
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        key = ''
         clr_keypad_2()
         return main()
     elif press == '#':
@@ -177,7 +181,6 @@ def scan_rfid(press):
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            key = ''
             clr_keypad_2()
             return main()
         if rfid_recieve:
@@ -185,7 +188,6 @@ def scan_rfid(press):
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            key = ''
             clr_keypad_2()
             valid_info()
         else:
@@ -193,7 +195,6 @@ def scan_rfid(press):
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            key = ''
             clr_keypad_2()
             invalid_info()
     else:
@@ -221,7 +222,6 @@ def scan_pin(press):
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        key = ''
         clr_keypad_3()
         return main()
     elif press == '#':
@@ -237,7 +237,6 @@ def scan_pin(press):
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            key = ''
             clr_keypad_3()
             return main()
         if pin_recieve:
@@ -246,7 +245,6 @@ def scan_pin(press):
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            key = ''
             clr_keypad_3()
             valid_info()
         else:
@@ -255,7 +253,6 @@ def scan_pin(press):
             sleep(0.5)
             GPIO.cleanup()
             setup()
-            key = ''
             clr_keypad_3()
             invalid_info()
     else:
@@ -288,7 +285,6 @@ def scan_in_out(press):
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        key = ''
         clr_keypad_0()
         main_rfid_pin()
     elif press == 'B':
@@ -296,7 +292,6 @@ def scan_in_out(press):
         sleep(0.5)
         GPIO.cleanup()
         setup()
-        key = ''
         clr_keypad_0()
         main_rfid_pin()
     else:
@@ -305,24 +300,24 @@ def scan_in_out(press):
 def scan_rfid_pin(press):
     if press == 'C':
         print('Access SCAN RDIF mode\n')
+        sleep(0.5)
         GPIO.cleanup()
         setup()
-        key = ''
         clr_keypad_1()
         main_rfid()
     elif press == 'D':
         print('Access SCAN PIN mode\n')
+        sleep(0.5)
         GPIO.cleanup()
         setup()
-        key = ''
         clr_keypad_1()
         main_pin()
     elif press == '*':
         print('Back to startup')
         print('')
+        sleep(0.5)
         GPIO.cleanup()
         setup()
-        key = ''
         clr_keypad_1()
         return main()
     else:
@@ -360,8 +355,85 @@ def main():
     print('Press A for CHECKIN mode - Press B for CHECKOUT mode\n')
     main_in_out()
     
+def run_gui():
+    win = tk.Tk()
+    app = gui(win)
+    win.mainloop()
+    
+class gui:
+    def __init__(self, win):
+        self.win = win
+        self.win.title('Attendance System')
+        self.win_wth = 1200
+        self.win_hht = 600
+        self.scr_wth = self.win.winfo_screenwidth()
+        self.scr_hht = self.win.winfo_screenheight()
+        self.x = (self.scr_wth/2) - (self.win_wth/2)
+        self.y = (self.scr_hht/2) - (self.win_hht/2)
+        self.win.geometry('%dx%d+%d+%d' % (self.win_wth, self.win_hht, self.x, self.y))
+        self.create_widgets()
+        self.show_page0()
+        self.time()
+
+    def time(self):
+        string = strftime('%A - %d/%m/%Y - %X')
+        self.page0_l0.config(text=string)
+        self.page1_l0.config(text=string)
+        self.page2_l0.config(text=string)
+        self.win.after(1000, self.time)
+
+    def show_page0(self):
+        self.page1.pack_forget()
+        self.page0.pack(expand=True, fill='both')
+
+    def show_page1(self):
+        self.page0.pack_forget()
+        self.page1.pack(expand=True, fill='both')
+        
+    def show_page2(self):
+        self.page0.pack_forget()
+        self.page2.pack(expand=True, fill='both')
+
+    def create_widgets(self):
+        self.page0 = tk.Frame(self.win)
+        self.page0_l0 = tk.Label(self.page0, font=('Arial', 50))
+        self.page0_l0.pack()
+        self.page0_l1 = tk.Label(self.page0, text='Choose mode:', font=('Arial', 50))
+        self.page0_l1.pack()
+        self.page0_l2 = tk.Label(self.page0, text='CHECKIN\nPress A', font=('Arial', 50), bg='green', fg='white')
+        self.page0_l2.pack(padx=350, expand=True, fill='x')
+        self.page0_l3 = tk.Label(self.page0, text='CHECKOUT\nPress B', font=('Arial', 50), bg='red', fg='white')
+        self.page0_l3.pack(padx=350, expand=True, fill='x')
+
+        self.page1 = tk.Frame(self.win)
+        self.page1_l0 = tk.Label(self.page1, font=('Arial', 50))
+        self.page1_l0.pack()
+        self.page1_l1 = tk.Label(self.page1, text='CHECKIN', font=('Arial', 50))
+        self.page1_l1.pack()
+        self.page1_l2 = tk.Label(self.page1, text='SCAN RFID\nPress C', font=('Arial', 40), bg='green', fg='white')
+        self.page1_l2.pack(padx=350, expand=True, fill='x')
+        self.page1_l3 = tk.Label(self.page1, text='SCAN PIN\nPress D', font=('Arial', 40), bg='red', fg='white')
+        self.page1_l3.pack(padx=350, expand=True, fill='x')
+        self.page1_l4 = tk.Label(self.page1, text='TO STARTUP\nPress *', font=('Arial', 40), bg='black', fg='white')
+        self.page1_l4.pack(padx=350, expand=True, fill='x')
+        
+        self.page2 = tk.Frame(self.win)
+        self.page2_l0 = tk.Label(self.page2, font=('Arial', 50))
+        self.page2_l0.pack()
+        self.page2_l1 = tk.Label(self.page2, text='CHECKIN', font=('Arial', 50))
+        self.page2_l1.pack()
+        self.page2_l2 = tk.Label(self.page2, text='SCAN RFID\nPress C', font=('Arial', 40), bg='green', fg='white')
+        self.page2_l2.pack(padx=350, expand=True, fill='x')
+        self.page2_l3 = tk.Label(self.page2, text='SCAN PIN\nPress D', font=('Arial', 40), bg='red', fg='white')
+        self.page2_l3.pack(padx=350, expand=True, fill='x')
+        self.page2_l4 = tk.Label(self.page2, text='TO STARTUP\nPress *', font=('Arial', 40), bg='black', fg='white')
+        self.page2_l4.pack(padx=350, expand=True, fill='x')
+
 if __name__ == '__main__':
     try:
+        gui_thr = threading.Thread(target=run_gui)
+        gui_thr.daemon = True
+        gui_thr.start()
         main()
     except KeyboardInterrupt:
         pass
