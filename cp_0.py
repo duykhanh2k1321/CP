@@ -2,6 +2,7 @@ import requests
 import tkinter as tk
 import RPi.GPIO as GPIO
 
+from time import time
 from time import sleep
 from time import strftime
 from mfrc522 import SimpleMFRC522
@@ -104,6 +105,7 @@ def control_lock():
 ''' Check RFID '''
 def rfid_read():
     rfid_input, _ = reader.read()
+    rfid_time = int(time())
     print(f'RFID: {rfid_input}')
     print('Do not scan RFID card/tag')
     print('Connecting to REST API Server')
@@ -111,6 +113,8 @@ def rfid_read():
     sleep (1)
     rfid_error, rfid_recieve = rfid_check(rfid_input)
     if rfid_error:
+        with open('rfid_storage.txt', 'a') as file:
+            file.write(f'Time: {rfid_time}, RFID: {rfid_input}\n')
         print('ERROR page\n')
         rfid_input_page.pack_forget()
         error_page.pack(expand = True, fill = 'both')
@@ -123,7 +127,7 @@ def rfid_read():
         valid_page.pack(expand = True, fill = 'both')
         win.after(1000, valid_data)
         win.after(2000, valid_to_main)
-    else:
+    else:       
         print(f'Info:\n{rfid_recieve.text}')
         print('INVALID page\n')
         rfid_input_page.pack_forget()
