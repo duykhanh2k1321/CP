@@ -1,11 +1,13 @@
+import os
+import csv
 import requests
 import tkinter as tk
 import RPi.GPIO as GPIO
 
-from time import time
 from time import sleep
 from time import strftime
 from mfrc522 import SimpleMFRC522
+from time import time as get_current_time
 
 ''' api_url '''
 url = 'https://a888-113-172-235-185.ngrok-free.app/api/hardware/check-for-l1'
@@ -105,28 +107,40 @@ def control_lock():
 ''' Check RFID '''
 def rfid_read():
     rfid_input, _ = reader.read()
-    rfid_time = int(time())
+    rfid_time = int(get_current_time())
     print(f'RFID: {rfid_input}')
+    print(f'Time: {rfid_time}')
     print('Do not scan RFID card/tag')
     print('Connecting to REST API Server')
     print('Checking RFID\n')
     sleep (1)
     rfid_error, rfid_recieve = rfid_check(rfid_input)
     if rfid_error:
-        with open('rfid_storage.txt', 'a') as file:
-            file.write(f'Time: {rfid_time}, RFID: {rfid_input}\n')
-        print('ERROR page\n')
-        rfid_input_page.pack_forget()
-        error_page.pack(expand = True, fill = 'both')
-        win.after(1000, error)
-        win.after(2000, error_to_main)
-    if rfid_recieve:
+        print('NO CONNECTION TO API')
+        if os.path.exists(f'{rfid_input}.csv'):
+            with open(f'{rfid_input}.csv', 'a', newline = '') as csv_file:
+                csv_writer = csv.writer(csv_file)
+                csv_writer.writerow([rfid_time])
+            print(f'Valid data: {rfid_input}')
+            print('VALID page\n')
+            rfid_input_page.pack_forget()
+            valid_page.pack(expand = True, fill = 'both')
+            win.after(1000, valid_data)
+            win.after(2000, valid_to_face)
+        else:
+            print(f'Invalid: {rfid_input}')
+            print('INVALID page\n')
+            rfid_input_page.pack_forget()
+            invalid_page.pack(expand = True, fill = 'both')
+            win.after(1000, invalid_data)
+            win.after(2000, invalid_to_main)
+    elif rfid_recieve:
         print(f'Info:\n{rfid_recieve.text}')
         print('VALID page\n')
         rfid_input_page.pack_forget()
         valid_page.pack(expand = True, fill = 'both')
         win.after(1000, valid_data)
-        win.after(2000, valid_to_main)
+        win.after(2000, valid_to_face)
     else:       
         print(f'Info:\n{rfid_recieve.text}')
         print('INVALID page\n')
@@ -158,10 +172,7 @@ def pin_read():
         print('ERROR page\n')
         pin_input_page.pack_forget()
         enable_buttons()
-        error_page.pack(expand = True, fill = 'both')
-        win.after(1000, error)
-        win.after(2000, error_to_main)
-    if pin_recieve:
+    elif pin_recieve:
         pin_input = ''
         pin_input_var.set('')
         print(f'Info:\n{pin_recieve.text}')
@@ -170,7 +181,7 @@ def pin_read():
         enable_buttons()
         valid_page.pack(expand = True, fill = 'both')
         win.after(1000, valid_data)
-        win.after(2000, valid_to_main)
+        win.after(2000, valid_to_face)
     else:
         pin_input = ''
         pin_input_var.set('')
@@ -185,7 +196,7 @@ def pin_read():
 def pin_check(pin_input):
     pin_error = False
     try:
-        pin_recieve = requests.post(url, json = {'pin_code': pin_input}, timeout = 5)
+        pin_recieve = requests.post(url, json = {'pin_code': pin_input}, timeout = 2)
     except requests.exceptions.RequestException as e:
         print(f'Error: {e}\n')
         print('')
@@ -214,7 +225,7 @@ def rfid_input():
 def rfid_to_main():
     print('RFID page to MAIN page\n')
     rfid_page.pack_forget()
-    return main()
+    main()
 
 def pin():
     print('PIN page\n')
@@ -229,7 +240,7 @@ def pin_input():
 def pin_to_main():
     print('PIN page to MAIN page\n')
     pin_page.pack_forget()
-    return main()
+    main()
 
 def pin_input_to_main():
     global pin_input
@@ -237,22 +248,17 @@ def pin_input_to_main():
     pin_input_var.set('')
     print(f'\nClear input PIN\nPIN INPUT page to MAIN page\n')
     pin_input_page.pack_forget()
-    return main()
+    main()
 
 def valid_to_face():
     print('VALID page to SCAN FACE page\n')
     valid_page.pack_forget()
-    return main()
+    main()
 
 def invalid_to_main():
     print('INVALID page to MAIN page\n')
     invalid_page.pack_forget()
-    return main()
-
-def error_to_main():
-    print('ERROR page to MAIN page\n')
-    error_page.pack_forget()
-    return main()
+    main()
 
 def button_press(press):
     global pin_input
@@ -377,13 +383,6 @@ invalid_page_l0 = tk.Label(invalid_page, text = 'LEVEL 1 SECURITY\nINVALID', fon
 invalid_page_l0.pack()
 invalid_page_l1 = tk.Label(invalid_page, text = 'INVALID DATA\nBACK TO MAIN WINDOW', font = ('arial', 50), bg ='red', fg = 'white')
 invalid_page_l1.pack(expand = True)
-
-''' INVALID DATA page '''
-error_page = tk.Frame(win)
-error_page_l0 = tk.Label(error_page, text = 'LEVEL 1 SECURITY\nERROR', font = ('arial', 50))
-error_page_l0.pack()
-error_page_l1 = tk.Label(error_page, text = 'ERROR\nBACK TO MAIN WINDOW', font = ('arial', 50), bg ='red', fg = 'white')
-error_page_l1.pack(expand = True)
 
 main()
 win.mainloop()
