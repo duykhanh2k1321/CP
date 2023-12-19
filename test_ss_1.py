@@ -52,6 +52,10 @@ else:
 similarity_above_80_percent = (similarity_above_80_count / num_comparisons) * 100
 print(f'Percentage of similarities greater than or equal to 80%: {similarity_above_80_percent}%')
 
+sorted_counts = sorted(similarity_counts.items(), key=lambda x: x[1], reverse=True)
+for similarity, count in sorted_counts:
+    print(f'Number of similarities at {similarity}%: {count}')
+
 sorted_counts = sorted(similarity_counts.items(), key=lambda x: x[0])
 similarities = [similarity for similarity, count in sorted_counts]
 counts = [count for similarity, count in sorted_counts]
