@@ -1,6 +1,7 @@
 import os
 import csv
 import cv2
+import sys
 import json
 import time
 import requests
@@ -58,43 +59,43 @@ def reset_outputs():
     
 ''' Make beep_sound_1 '''    
 def beep1():
-    GPIO.output(th1, 1)
-    print('th1 on')
-    print('Sleep 0.2')
-    sleep(0.2)
-    GPIO.output(th1, 0)
-    print('th2 off')
-    print('')
+    for i in range (1, 5):
+        GPIO.output(th1, 1)
+        print('th1 on')
+        print('Sleep 0.05')
+        sleep(0.05)
+        GPIO.output(th1, 0)
+        print('th1 off')
+        print('Sleep 0.05\n')
+        sleep(0.05)
     
 ''' Make beep_sound_2 '''    
 def beep2():
-    for i in range (1, 5):
-        GPIO.output(th2, 1)
-        print('th2 on')
-        print('Sleep 0.05')
-        sleep(0.05)
-        GPIO.output(th2, 0)
-        print('th2 off')
-        print('Sleep 0.05\n')
-        sleep(0.05)
+    GPIO.output(th2, 1)
+    print('th2 on')
+    print('Sleep 0.2')
+    sleep(0.2)
+    GPIO.output(th2, 0)
+    print('th2 off')
+    print('')
     
 ''' Valid RFID/PIN/FACE '''
 def valid_data():
     reset_outputs()
-    beep1()
+    beep2()
     reset_outputs()
     
 ''' Invalid RFID/PIN/FACE '''
 def invalid_data():
     reset_outputs()
-    beep2()
+    beep1()
     reset_outputs()
     
 ''' Error '''
 def error():
     print('Error')
     reset_outputs()
-    beep2()
+    beep1()
     reset_outputs()
     
 ''' Unlock and lock after 3 seconds '''
@@ -110,6 +111,19 @@ def control_lock():
     reset_outputs()
     access_granted_page.pack_forget()
     main()
+    
+''' Restart program '''    
+def restart():
+    print('RESTART PROGRAM\n')
+    GPIO.cleanup()
+    python = sys.executable
+    os.execl(python, python, *sys.argv)
+    
+''' Close GUI and stop program '''
+def close():
+    print('CLOSE GUI AND STOP PROGRAM\n')
+    GPIO.cleanup()
+    sys.exit(0)
     
 ''' Ping to Google for checking Internet connection '''   
 def ping(host):
@@ -154,7 +168,7 @@ def enable_buttons():
     back.config(state = 'normal')
    
 def time():
-    string = strftime('%A - %d/%m/%Y - %X')
+    string = strftime('%a - %d/%m/%Y - %X')
     main_page_l0.config(text = string)
     rfid_page_l0.config(text = string)
     pin_page_l0.config(text = string)
@@ -186,7 +200,7 @@ def rfid_read():
             print('LEVEL 1 VALID page\n')
             rfid_input_page.pack_forget()
             level1_valid_page.pack(expand = True, fill = 'both')
-            win.after(1000, valid_data)
+            win.after(100, valid_data)
             win.after(2000, face_scan)
         else:
             print(f'Invalid rfid: {rfid_input}')
@@ -194,7 +208,7 @@ def rfid_read():
             print('LEVEL 1 INVALID page\n')
             rfid_input_page.pack_forget()
             level1_invalid_page.pack(expand = True, fill = 'both')
-            win.after(1000, invalid_data)
+            win.after(100, invalid_data)
             win.after(2000, level1_to_main)
     elif rfid_recieve:
         print(f'Info:\n{rfid_recieve.text}')
@@ -205,8 +219,8 @@ def rfid_read():
         print('LEVEL 1 VALID page\n')
         rfid_input_page.pack_forget()
         level1_valid_page.pack(expand = True, fill = 'both')
-        win.after(1000, valid_data)
-        win.after(2000, face_scan)
+        win.after(100, valid_data)
+        win.after(1000, face_scan)
     else:       
         print(f'Info:\n{rfid_recieve.text}\n')
         print(f'Invalid rfid: {rfid_input}')
@@ -214,7 +228,7 @@ def rfid_read():
         print('LEVEL 1 INVALID page\n')
         rfid_input_page.pack_forget()
         level1_invalid_page.pack(expand = True, fill = 'both')
-        win.after(1000, invalid_data)
+        win.after(100, invalid_data)
         win.after(2000, level1_to_main)
 
 def rfid_check(rfid_input):
@@ -238,7 +252,7 @@ def rfid_check(rfid_input):
     
 ''' Check PIN '''
 def pin_read():
-    global pin_input
+    global pin_input, user_id
     disable_buttons()
     print(f'Connecting to REST API Server to check PIN: {pin_input}\n')
     pin_error, pin_recieve = pin_check(pin_input)
@@ -249,27 +263,32 @@ def pin_read():
         pin_input_page.pack_forget()
         enable_buttons()
         error_page.pack(expand = True, fill = 'both')
-        win.after(1000, error)
+        win.after(100, error)
         win.after(2000, error_to_main)
     elif pin_recieve:
         pin_input = ''
         pin_input_var.set('')
         print(f'Info:\n{pin_recieve.text}\n')
-        print('VALID page\n')
+        user_id = json.loads(pin_recieve.text).get('user_id', None)
+        print(f'Valid pin: {pin_input}')
+        print('Pass level 1 security')
+        print('LEVEL 1 VALID page\n')
         pin_input_page.pack_forget()
         enable_buttons()
-        valid_page_c1.pack(expand = True, fill = 'both')
-        win.after(1000, valid_data)
-        win.after(2000, scan_face)
+        level1_valid_page.pack(expand = True, fill = 'both')
+        win.after(100, valid_data)
+        win.after(2000, face_scan)
     else:
         pin_input = ''
         pin_input_var.set('')
         print(f'Info:\n{pin_recieve.text}\n')
-        print('INVALID page\n')
+        print(f'Invalid pin: {pin_input}')
+        print('Not pass level 1 security')
+        print('LEVEL 1 INVALID page\n')
         pin_input_page.pack_forget()
         enable_buttons()
-        invalid_page_c1.pack(expand = True, fill = 'both')
-        win.after(1000, invalid_data)
+        level1_invalid_page.pack(expand = True, fill = 'both')
+        win.after(100, invalid_data)
         win.after(2000, level1_to_main)
 
 def pin_check(pin_input):
@@ -293,15 +312,16 @@ def pin_check(pin_input):
     
 ''' Check face '''
 def face_scan_read():
+    print('Face scan read, start\n')
     global user_id
-    face_scan_page_l2.configure(state = 'disabled')
-    face_scan_page_l3.configure(state = 'disabled')
+    face_scan_page_b0.configure(state = 'disabled')
+    face_scan_page_b1.configure(state = 'disabled')
     # Load the TFLite model
     interpreter = tflite.Interpreter(model_path = 'model.tflite')
     interpreter.allocate_tensors()
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
-    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')  # Load the pre-trained face detection model
+    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml') # Load the pre-trained face detection model
     os.makedirs('fs', exist_ok = True)  # Directory to save feature vectors
     cap = cv2.VideoCapture(0)  # Access the USB webcam
     cv2.namedWindow('Capture Interface')  # Create a window to display interface
@@ -348,7 +368,7 @@ def face_scan_read():
     face_check()
     
 def face_check():
-    global rfid_input, user_id, result
+    global rfid_input, user_id
     print(f'RFID: {rfid_input}\nUSER ID: {user_id}\n')
     with open(f'fs/{user_id}.csv', mode='r') as file:
         reader = csv.reader(file)
@@ -384,14 +404,14 @@ def face_check():
         print('Pass level 2 security\n')
         print('LEVEL 2 VALID page\n')
         level2_valid_page.pack(expand = True, fill = 'both')
-        win.after(1000, valid_data)
+        win.after(100, valid_data)
         win.after(2000, access_handling)
     else:
         print('Invalid face')
         print('Not pass level 2 security\n')
         print('LEVEL 2 INVALID page\n')
         level2_invalid_page.pack(expand = True, fill = 'both')
-        win.after(1000, invalid_data)
+        win.after(100, invalid_data)
         win.after(2000, level2_to_main)
         
 def access_handling():
@@ -399,7 +419,7 @@ def access_handling():
     result = ({'user_id': user_id, 'access_status': 'true'})
     print('Access handling')
     print('Connecting to REST API Server\n')
-    access_error = access_check(result)
+    access_error, access_receive = access_check(result)
     if access_error:
         access_time = int(get_current_time())
         print('No connection to API\n')
@@ -413,7 +433,7 @@ def access_handling():
             print('ACCESS GRANTED page\n')
             level2_valid_page.pack_forget()
             access_granted_page.pack(expand = True, fill = 'both')
-            win.after(1000, valid_data)
+            win.after(100, valid_data)
             win.after(2000, control_lock)
         else:
             print(f'RFID: {rfid_input}')
@@ -422,7 +442,7 @@ def access_handling():
             print('ACCESS DENIED page\n')
             level2_valid_page.pack_forget()
             access_denied_page.pack(expand = True, fill = 'both')
-            win.after(1000, invalid_data)
+            win.after(100, invalid_data)
             win.after(2000, access_check_to_main)
     else:
         print(f'Info:\n{access_receive.text}\n')
@@ -432,7 +452,7 @@ def access_handling():
         print('ACCESS GRANTED page\n')
         level2_valid_page.pack_forget()
         access_granted_page.pack(expand = True, fill = 'both')
-        win.after(1000, valid_data)
+        win.after(100, valid_data)
         win.after(2000, control_lock)
 
 def access_check(result):
@@ -440,39 +460,44 @@ def access_check(result):
     if ping('google.com'):
         try:
             access_receive = requests.post(url2, json = result, timeout = 1)
-            print(f'{api_check_response}\n')
-            return access_error
+            print(f'{access_receive}\n')
+            return access_error, access_receive
         except requests.Timeout:
             print('Request timeout\n')
             access_error = True
-            return access_error
+            return access_error, None
         except requests.RequestException as e:
             print(f'Request error: {str(e)}\n')
             access_error = True
-            return access_error
+            return access_error, None
     else:
         access_error = True
-        return access_error
+        return access_error, None
         
 ''' Check FACE ADD RFID '''
 def face_add_rfid_read():
-    global rfid_input
+    global rfid_input, user_id
     rfid_input, _ = reader.read()
     print(f'RFID: {rfid_input}')
     print('Do not scan RFID card/tag')
     print('Connecting to REST API Server')
     print('Checking RFID\n')
-    sleep (1)
     rfid_error, rfid_recieve = face_add_rfid_check(rfid_input)
     if rfid_error:
         print('NO CONNECTION TO API\n')
         if os.path.exists(f'rfid/{rfid_input}.csv'):
             print(f'Valid rfid: {rfid_input}')
+            with open('id.csv', mode = 'r') as file:
+                id_reader = csv.reader(file)
+                for row in id_reader:
+                    if row[1] == str(rfid_input):
+                        user_id = row[0]
+                        print(f'USER ID: {user_id}')
             print('Pass face add security')
             print('FACE ADD VALID page\n')
             face_add_rfid_input_page.pack_forget()
             face_add_valid_page.pack(expand = True, fill = 'both')
-            win.after(1000, valid_data)
+            win.after(100, valid_data)
             win.after(2000, face_add_add)
             win.after(3000, face_add_done)
         else:
@@ -481,16 +506,18 @@ def face_add_rfid_read():
             print('FACE ADD INVALID page\n')
             face_add_rfid_input_page.pack_forget()
             face_add_invalid_page.pack(expand = True, fill = 'both')
-            win.after(1000, invalid_data)
+            win.after(100, invalid_data)
             win.after(2000, face_add_invalid_to_main)
     elif rfid_recieve:
         print(f'Info:\n{rfid_recieve.text}\n')
+        user_id = json.loads(rfid_recieve.text).get('user_id', None)
         print(f'Valid rfid: {rfid_input}')
+        print(f'USER ID: {user_id}')
         print('Pass face add security')
         print('FACE ADD VALID page\n')
         face_add_rfid_input_page.pack_forget()
         face_add_valid_page.pack(expand = True, fill = 'both')
-        win.after(1000, valid_data)
+        win.after(100, valid_data)
         win.after(2000, face_add_add)
         win.after(3000, face_add_done)
     else:       
@@ -500,8 +527,8 @@ def face_add_rfid_read():
         print('FACE ADD INVALID page\n')
         face_add_rfid_input_page.pack_forget()
         face_add_invalid_page.pack(expand = True, fill = 'both')
-        win.after(1000, invalid_data)
-        win.after(2000, face_add_invalid_to_main)
+        win.after(100, invalid_data)
+        win.after(1000, face_add_invalid_to_main)
 
 def face_add_rfid_check(rfid_input):
     rfid_error = False
@@ -532,6 +559,7 @@ def face_add_add():
             if row[1] == str(rfid_input):
                 user_id = row[0]
                 print(f'USER ID: {user_id}\n')
+    print('Face add add, start\n')
     # Load the TFLite model
     interpreter = tflite.Interpreter(model_path = 'model.tflite')
     interpreter.allocate_tensors()
@@ -683,8 +711,8 @@ def face_add_invalid_to_main():
 def face_scan():
     print('LEVEL 1 VALID DATA page to FACE SCAN page\nFACE SCAN page\n')
     level1_valid_page.pack_forget()
-    face_scan_page_l2.configure(state = 'normal')
-    face_scan_page_l3.configure(state = 'normal')
+    face_scan_page_b0.configure(state = 'normal')
+    face_scan_page_b1.configure(state = 'normal')
     face_scan_page.pack(expand = True, fill = 'both')
     
 ''' FACE SCAN TO MAIN ''' 
@@ -722,7 +750,7 @@ win = tk.Tk()
 
 win = win
 win.title('Attendance System')
-win_wth = 1200
+win_wth = 1024
 win_hht = 600
 scr_wth = win.winfo_screenwidth()
 scr_hht = win.winfo_screenheight()
@@ -732,16 +760,27 @@ win.geometry('%dx%d+%d+%d' % (win_wth, win_hht, x, y))
 
 ''' Choose mode RFID/PIN/FACE ADD - MAIN page '''
 main_page = tk.Frame(win)
-main_page_l0 = tk.Label(main_page, font = ('arial', 50))
+main_page.pack(expand = True, fill = 'both')
+main_page_l0 = tk.Label(main_page, font=('arial', 50))
 main_page_l0.pack()
-main_page_l1 = tk.Label(main_page, text = 'LEVEL 1 SECURITY\nMAIN', font = ('arial', 50))
+main_page_l1 = tk.Label(main_page, text='LEVEL 1 SECURITY\nMAIN', font=('arial', 50))
 main_page_l1.pack()
-main_page_l2 = tk.Button(main_page, text = 'RFID', font = ('arial', 50), bg = 'green', fg = 'white', command = rfid)
-main_page_l2.pack(padx = 350, expand = True, fill = 'x')
-main_page_l3 = tk.Button(main_page, text = 'PIN', font = ('arial', 50), bg = 'green', fg = 'white', command = pin)
-main_page_l3.pack(padx = 350, expand = True, fill = 'x')
-main_page_l2 = tk.Button(main_page, text = 'FACE ADD', font = ('arial', 50), bg = 'green', fg = 'white', command = face_add)
-main_page_l2.pack(padx = 350, expand = True, fill = 'x')
+main_page_f0 = tk.Frame(main_page)
+main_page_f0.pack(expand = True, fill = 'x')
+main_page_f0.columnconfigure(0, weight = 1, uniform = 'equal')
+main_page_f0.columnconfigure(1, weight = 1, uniform = 'equal')
+main_page_f1 = tk.Frame(main_page)
+main_page_f1.pack(expand = True, fill = 'x')
+main_page_f1.columnconfigure(0, weight = 1, uniform = 'equal')
+main_page_f1.columnconfigure(1, weight = 1, uniform = 'equal')
+main_page_b0 = tk.Button(main_page_f0, text = 'RFID', font = ('arial', 50), bg = 'green', fg = 'white', command = rfid)
+main_page_b0.grid(row = 0, column = 0, padx = 10, pady = 10, sticky = 'nsew')
+main_page_b1 = tk.Button(main_page_f0, text = 'PIN', font = ('arial', 50), bg = 'green', fg = 'white', command = pin)
+main_page_b1.grid(row = 0, column = 1, padx = 10, pady = 10, sticky = 'nsew')
+main_page_b2 = tk.Button(main_page_f1, text = 'FACE ADD', font = ('arial', 50), bg = 'green', fg = 'white', command = face_add)
+main_page_b2.grid(row = 0, column = 0, padx = 10, pady = 10, sticky = 'nsew')
+main_page_b3 = tk.Button(main_page_f1, text = 'RESTART', font = ('arial', 50), bg = 'red', fg = 'white', command = restart)
+main_page_b3.grid(row = 0, column = 1, padx = 10, pady = 10, sticky = 'nsew')
 
 ''' RFID page '''
 rfid_page = tk.Frame(win)
@@ -749,16 +788,16 @@ rfid_page_l0 = tk.Label(rfid_page, font = ('arial', 50))
 rfid_page_l0.pack()
 rfid_page_l1 = tk.Label(rfid_page, text = 'LEVEL 1 SECURITY\nRFID', font = ('arial', 50))
 rfid_page_l1.pack()
-rfid_page_l2 = tk.Button(rfid_page, text = 'INPUT RFID', font = ('arial', 50), bg ='green', fg = 'white', command = rfid_input)
-rfid_page_l2.pack(padx = 350, expand = True, fill = 'x')
-rfid_page_l3 = tk.Button(rfid_page, text = 'BACK', font = ('arial', 50), bg = 'black', fg = 'white', command = rfid_to_main)
-rfid_page_l3.pack(padx = 350, expand = True, fill = 'x')
+rfid_page_b0 = tk.Button(rfid_page, text = 'INPUT RFID', font = ('arial', 50), bg ='green', fg = 'white', command = rfid_input)
+rfid_page_b0.pack(padx = 300, expand = True, fill = 'x')
+rfid_page_b1 = tk.Button(rfid_page, text = 'BACK', font = ('arial', 50), bg = 'black', fg = 'white', command = rfid_to_main)
+rfid_page_b1.pack(padx = 300, expand = True, fill = 'x')
 
 ''' RFID INPUT page '''
 rfid_input_page = tk.Frame(win)
 rfid_input_page_l0 = tk.Label(rfid_input_page, text = 'LEVEL 1 SECURITY\nRFID INPUT', font = ('arial', 50))
 rfid_input_page_l0.pack()
-rfid_input_page_l1 = tk.Label(rfid_input_page, text = 'PLEASE INPUT RFID CARD/TAG', font = ('arial', 50), bg ='green', fg = 'white')
+rfid_input_page_l1 = tk.Label(rfid_input_page, text = 'PLEASE INPUT\nRFID CARD/TAG', font = ('arial', 50), bg ='green', fg = 'white')
 rfid_input_page_l1.pack(expand = True)
 
 ''' PIN page '''
@@ -767,10 +806,10 @@ pin_page_l0 = tk.Label(pin_page, font = ('arial', 50))
 pin_page_l0.pack()
 pin_page_l1 = tk.Label(pin_page, text = 'LEVEL 1 SECURITY\nPIN', font = ('arial', 50))
 pin_page_l1.pack()
-pin_page_l2 = tk.Button(pin_page, text = 'INPUT PIN', font = ('arial', 50), bg ='green', fg = 'white', command = pin_input)
-pin_page_l2.pack(padx = 350, expand = True, fill = 'x')
-pin_page_l3 = tk.Button(pin_page, text = 'BACK', font = ('arial', 50), bg = 'black', fg = 'white', command = pin_to_main)
-pin_page_l3.pack(padx = 350, expand = True, fill = 'x')
+pin_page_b0 = tk.Button(pin_page, text = 'INPUT PIN', font = ('arial', 50), bg ='green', fg = 'white', command = pin_input)
+pin_page_b0.pack(padx = 300, expand = True, fill = 'x')
+pin_page_b1 = tk.Button(pin_page, text = 'BACK', font = ('arial', 50), bg = 'black', fg = 'white', command = pin_to_main)
+pin_page_b1.pack(padx = 300, expand = True, fill = 'x')
 
 ''' PIN INPUT page '''
 pin_input_page = tk.Frame(win)
@@ -820,16 +859,16 @@ face_add_page_l0 = tk.Label(face_add_page, font = ('arial', 50))
 face_add_page_l0.pack()
 face_add_page_l1 = tk.Label(face_add_page, text = 'FACE ADD\nRFID', font = ('arial', 50))
 face_add_page_l1.pack()
-face_add_page_l2 = tk.Button(face_add_page, text = 'INPUT RFID', font = ('arial', 50), bg ='green', fg = 'white', command = face_add_rfid_input)
-face_add_page_l2.pack(padx = 350, expand = True, fill = 'x')
-face_add_page_l3 = tk.Button(face_add_page, text = 'BACK', font = ('arial', 50), bg = 'black', fg = 'white', command = face_add_to_main)
-face_add_page_l3.pack(padx = 350, expand = True, fill = 'x')
+face_add_page_b0 = tk.Button(face_add_page, text = 'INPUT RFID', font = ('arial', 50), bg ='green', fg = 'white', command = face_add_rfid_input)
+face_add_page_b0.pack(padx = 300, expand = True, fill = 'x')
+face_add_page_b1 = tk.Button(face_add_page, text = 'BACK', font = ('arial', 50), bg = 'black', fg = 'white', command = face_add_to_main)
+face_add_page_b1.pack(padx = 300, expand = True, fill = 'x')
 
 ''' FACE ADD RFID INPUT page '''
 face_add_rfid_input_page = tk.Frame(win)
 face_add_rfid_input_page_l0 = tk.Label(face_add_rfid_input_page, text = 'FACE ADD\nRFID INPUT', font = ('arial', 50))
 face_add_rfid_input_page_l0.pack()
-face_add_rfid_input_page_l1 = tk.Label(face_add_rfid_input_page, text = 'PLEASE INPUT RFID CARD/TAG', font = ('arial', 50), bg ='green', fg = 'white')
+face_add_rfid_input_page_l1 = tk.Label(face_add_rfid_input_page, text = 'PLEASE INPUT\nRFID CARD/TAG', font = ('arial', 50), bg ='green', fg = 'white')
 face_add_rfid_input_page_l1.pack(expand = True)
 
 ''' FACE ADD VALID DATA page '''
@@ -859,10 +898,10 @@ face_scan_page_l0 = tk.Label(face_scan_page, font = ('arial', 50))
 face_scan_page_l0.pack()
 face_scan_page_l1 = tk.Label(face_scan_page, text = 'LEVEL 2 SECURITY\nFACE SCAN', font = ('arial', 50))
 face_scan_page_l1.pack()
-face_scan_page_l2 = tk.Button(face_scan_page, text = 'START', font = ('arial', 50), bg = 'green', fg = 'white', command = face_scan_read)
-face_scan_page_l2.pack(padx = 350, expand = True, fill = 'x')
-face_scan_page_l3 = tk.Button(face_scan_page, text = 'BACK', font = ('arial', 50), bg = 'black', fg = 'white', command = face_scan_to_main)
-face_scan_page_l3.pack(padx = 350, expand = True, fill = 'x')
+face_scan_page_b0 = tk.Button(face_scan_page, text = 'START', font = ('arial', 50), bg = 'green', fg = 'white', command = face_scan_read)
+face_scan_page_b0.pack(padx = 300, expand = True, fill = 'x')
+face_scan_page_b1 = tk.Button(face_scan_page, text = 'BACK', font = ('arial', 50), bg = 'black', fg = 'white', command = face_scan_to_main)
+face_scan_page_b1.pack(padx = 300, expand = True, fill = 'x')
 
 ''' LEVEL 2 VALID DATA page '''
 level2_valid_page = tk.Frame(win)
@@ -891,6 +930,8 @@ access_denied_page_l0 = tk.Label(access_denied_page, text = 'ACCESS CHECK\nDENIE
 access_denied_page_l0.pack()
 access_denied_page_l2 = tk.Label(access_denied_page, text = 'ACCESS DENIED\nBACK TO MAIN WINDOW', font = ('arial', 50), bg = 'red', fg = 'white')
 access_denied_page_l2.pack(expand = True)
+
+win.protocol('WM_DELETE_WINDOW', close)
 
 main()
 win.mainloop()
