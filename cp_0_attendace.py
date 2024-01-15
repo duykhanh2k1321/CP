@@ -100,6 +100,7 @@ def error():
     
 ''' Unlock and lock after 3 seconds '''
 def control_lock():
+    reset_outputs()
     print('Unlocking')
     print('After 3 seconds')
     GPIO.output(th3, 0)
@@ -181,31 +182,31 @@ def time():
 def rfid_read():
     global rfid_input, user_id
     rfid_input, _ = reader.read()
-    print(f'RFID: {rfid_input}')
-    print('Do not scan RFID card/tag')
-    print('Connecting to REST API Server')
-    print('Checking RFID\n')
+    print(f'RFID: {rfid_input}\nDo not scan RFID card/tag')
+    print('Connecting to REST API Server\nChecking RFID\n')
+    start_time = get_current_time()
     rfid_error, rfid_recieve = rfid_check(rfid_input)
+    end_time = get_current_time()
+    execution_time = end_time - start_time
+    print(f'RFID execution time: {execution_time} sec\n')
     if rfid_error:
         print('No connection to API')
         if os.path.exists(f'rfid/{rfid_input}.csv'):
-            print(f'Valid rfid: {rfid_input}')
+            print(f'Valid RFID: {rfid_input}')
             with open('id.csv', mode = 'r') as file:
                 id_reader = csv.reader(file)
                 for row in id_reader:
                     if row[1] == str(rfid_input):
                         user_id = row[0]
                         print(f'USER ID: {user_id}')
-            print('Pass level 1 security')
-            print('LEVEL 1 VALID page\n')
+            print('Pass level 1 security\nLEVEL 1 VALID page\n')
             rfid_input_page.pack_forget()
             level1_valid_page.pack(expand = True, fill = 'both')
             win.after(100, valid_data)
             win.after(2000, face_scan)
         else:
-            print(f'Invalid rfid: {rfid_input}')
-            print('Not pass level 1 security')
-            print('LEVEL 1 INVALID page\n')
+            print(f'Invalid RFID: {rfid_input}\nUSER ID: N/A')
+            print('Not pass level 1 security\nLEVEL 1 INVALID page\n')
             rfid_input_page.pack_forget()
             level1_invalid_page.pack(expand = True, fill = 'both')
             win.after(100, invalid_data)
@@ -213,19 +214,16 @@ def rfid_read():
     elif rfid_recieve:
         print(f'Info:\n{rfid_recieve.text}')
         user_id = json.loads(rfid_recieve.text).get('user_id', None)
-        print(f'Valid rfid: {rfid_input}')
-        print(f'USER ID: {user_id}')
-        print('Pass level 1 security')
-        print('LEVEL 1 VALID page\n')
+        print(f'Valid RFID: {rfid_input}\nUSER ID: {user_id}')
+        print('Pass level 1 security\nLEVEL 1 VALID page\n')
         rfid_input_page.pack_forget()
         level1_valid_page.pack(expand = True, fill = 'both')
         win.after(100, valid_data)
         win.after(1000, face_scan)
     else:       
         print(f'Info:\n{rfid_recieve.text}\n')
-        print(f'Invalid rfid: {rfid_input}')
-        print('Not pass level 1 security')
-        print('LEVEL 1 INVALID page\n')
+        print(f'Invalid RFID: {rfid_input}\nUSER ID: N/A')
+        print('Not pass level 1 security\nLEVEL 1 INVALID page\n')
         rfid_input_page.pack_forget()
         level1_invalid_page.pack(expand = True, fill = 'both')
         win.after(100, invalid_data)
@@ -255,7 +253,11 @@ def pin_read():
     global pin_input, user_id
     disable_buttons()
     print(f'Connecting to REST API Server to check PIN: {pin_input}\n')
+    start_time = get_current_time()
     pin_error, pin_recieve = pin_check(pin_input)
+    end_time = get_current_time()
+    execution_time = end_time - start_time
+    print(f'PIN execution time: {execution_time} sec\n')
     if pin_error:
         pin_input = ''
         pin_input_var.set('')
@@ -270,9 +272,8 @@ def pin_read():
         pin_input_var.set('')
         print(f'Info:\n{pin_recieve.text}\n')
         user_id = json.loads(pin_recieve.text).get('user_id', None)
-        print(f'Valid pin: {pin_input}')
-        print('Pass level 1 security')
-        print('LEVEL 1 VALID page\n')
+        print(f'Valid PIN: {pin_input}\nUSER ID: {user_id}')
+        print('Pass level 1 security\nLEVEL 1 VALID page\n')
         pin_input_page.pack_forget()
         enable_buttons()
         level1_valid_page.pack(expand = True, fill = 'both')
@@ -282,9 +283,8 @@ def pin_read():
         pin_input = ''
         pin_input_var.set('')
         print(f'Info:\n{pin_recieve.text}\n')
-        print(f'Invalid pin: {pin_input}')
-        print('Not pass level 1 security')
-        print('LEVEL 1 INVALID page\n')
+        print(f'Invalid pin: {pin_input}\nUSER ID: N/A')
+        print('Not pass level 1 security\nLEVEL 1 INVALID page\n')
         pin_input_page.pack_forget()
         enable_buttons()
         level1_invalid_page.pack(expand = True, fill = 'both')
@@ -334,6 +334,7 @@ def face_scan_read():
         cv2.waitKey(1)
     # Process the webcam frames
     vector = []  # Initialize vector to store the single facial feature
+    start_time = get_current_time()
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -364,92 +365,98 @@ def face_scan_read():
     with open(output_file, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(vector.tolist())
+    end_time = get_current_time()
+    execution_time = end_time - start_time
+    print(f'FACE SCAN execution time: {execution_time} sec\n')
     print('Face scan read, done\n')
     face_check()
     
 def face_check():
     global rfid_input, user_id
     print(f'RFID: {rfid_input}\nUSER ID: {user_id}\n')
-    with open(f'fs/{user_id}.csv', mode='r') as file:
-        reader = csv.reader(file)
-        fs_features = [np.array(row, dtype = np.float32) for row in reader]
-    with open(f'fd/{user_id}.csv', mode = 'r') as file:
-        reader = csv.reader(file)
-        fd_features = [np.array(row, dtype = np.float32) for row in reader]
-    max_similarity = -1
-    min_similarity = float('inf')
-    total_similarity = 0
-    num_comparisons = 0
-    similarity_above_80_count = 0
-    for i, fs_vector in enumerate(fs_features):
-        for j, fd_vector in enumerate(fd_features):
-            similarity = np.dot(fs_vector, fd_vector) / (np.linalg.norm(fs_vector) * np.linalg.norm(fd_vector))
-            max_similarity = max(max_similarity, similarity)
-            min_similarity = min(min_similarity, similarity)
-            total_similarity += similarity
-            num_comparisons += 1
-            print(f'Percentage between vector {i} in fs/{user_id}.csv and vector {j} in fd/{user_id}.csv : {similarity * 100}%')
-            if similarity >= 0.8:
-                similarity_above_80_count += 1
-    print(f'Maximum similarity: {max_similarity * 100}%')
-    print(f'Minimum similarity: {min_similarity * 100}%')
-    similarity_above_80_percent = (similarity_above_80_count / num_comparisons) * 100
-    print(f'Percentage of ratios greater than or equal to 80%: {similarity_above_80_percent}%\n')
-    face_scan_page.pack_forget()
-    if similarity_above_80_percent >= 80:
-        user_time = int(get_current_time())
-        print('Valid face')
-        print(f'USER ID: {user_id}')
-        print(f'USER TIME: {user_time}\n')
-        print('Pass level 2 security\n')
-        print('LEVEL 2 VALID page\n')
-        level2_valid_page.pack(expand = True, fill = 'both')
-        win.after(100, valid_data)
-        win.after(2000, access_handling)
-    else:
-        print('Invalid face')
-        print('Not pass level 2 security\n')
-        print('LEVEL 2 INVALID page\n')
-        level2_invalid_page.pack(expand = True, fill = 'both')
+    start_time = get_current_time()
+    fs_path = f'fs/{user_id}.csv'
+    fd_path = f'fd/{user_id}.csv'
+    if not os.path.exists(fd_path):
+        print(f'Invalid face database')
+        face_scan_page.pack_forget()
+        face_check_invalid_page.pack(expand = True, fill = 'both')
         win.after(100, invalid_data)
-        win.after(2000, level2_to_main)
+        win.after(2000, face_check_invalid_to_main)
+    else:
+        with open(fs_path, mode='r') as file:
+            reader = csv.reader(file)
+            fs_features = [np.array(row, dtype=np.float32) for row in reader]
+        with open(fd_path, mode='r') as file:
+            reader = csv.reader(file)
+            fd_features = [np.array(row, dtype=np.float32) for row in reader]
+        max_similarity = -1
+        min_similarity = float('inf')
+        total_similarity = 0
+        num_comparisons = 0
+        similarity_above_80_count = 0
+        for i, fs_vector in enumerate(fs_features):
+            for j, fd_vector in enumerate(fd_features):
+                similarity = np.dot(fs_vector, fd_vector) / (np.linalg.norm(fs_vector) * np.linalg.norm(fd_vector))
+                max_similarity = max(max_similarity, similarity)
+                min_similarity = min(min_similarity, similarity)
+                total_similarity += similarity
+                num_comparisons += 1
+                print(f'Percentage between vector {i} in fs/{user_id}.csv and vector {j} in fd/{user_id}.csv : {similarity * 100}%')
+                if similarity >= 0.8:
+                    similarity_above_80_count += 1
+        print(f'Maximum similarity: {max_similarity * 100}%')
+        print(f'Minimum similarity: {min_similarity * 100}%')
+        similarity_above_80_percent = (similarity_above_80_count / num_comparisons) * 100
+        print(f'Percentage of ratios greater than or equal to 80%: {similarity_above_80_percent}%\n')
+        end_time = get_current_time()
+        execution_time = end_time - start_time
+        print(f'FACE CHECK execution time: {execution_time} sec\n')
+        face_scan_page.pack_forget()
+        if similarity_above_80_percent >= 80:
+            user_time = int(get_current_time())
+            print('Valid face')
+            print(f'USER ID: {user_id}\nUSER TIME: {user_time}')
+            print('Pass level 2 security\nLEVEL 2 VALID page\n')
+            level2_valid_page.pack(expand = True, fill = 'both')
+            win.after(100, valid_data)
+            win.after(2000, access_handling)
+        else:
+            print('Invalid face')
+            print('Not pass level 2 security\nLEVEL 2 INVALID page\n')
+            level2_invalid_page.pack(expand = True, fill = 'both')
+            win.after(100, invalid_data)
+            win.after(2000, level2_to_main)
         
 def access_handling():
     global rfid_input, user_id
-    result = ({'user_id': user_id, 'access_status': 'true'})
-    print('Access handling')
-    print('Connecting to REST API Server\n')
+    result = {'user_id': user_id, 'access_status': 'true'}
+    print('Access handling\nConnecting to REST API Server\n')
     access_error, access_receive = access_check(result)
     if access_error:
         access_time = int(get_current_time())
-        print('No connection to API\n')
+        print('No connection to API')
         if os.path.exists(f'rfid/{rfid_input}.csv'):
             with open(f'rfid/{rfid_input}.csv', 'a', newline = '') as csv_file:
                 csv_writer = csv.writer(csv_file)
                 csv_writer.writerow([access_time])
-            print(f'RFID: {rfid_input}')
-            print(f'USER ID: {user_id}')
-            print(f'Access granted')
-            print('ACCESS GRANTED page\n')
+            print(f'Valid RFID: {rfid_input}\nUSER ID: {user_id}')
+            print(f'Access granted\nACCESS GRANTED page\n')
             level2_valid_page.pack_forget()
             access_granted_page.pack(expand = True, fill = 'both')
             win.after(100, valid_data)
             win.after(2000, control_lock)
         else:
-            print(f'RFID: {rfid_input}')
-            print(f'USER ID: {user_id}')
-            print(f'Access denied')
-            print('ACCESS DENIED page\n')
+            print(f'Inavalid RFID: {rfid_input}\nUSER ID: N/A')
+            print(f'Access denied\nACCESS DENIED page\n')
             level2_valid_page.pack_forget()
             access_denied_page.pack(expand = True, fill = 'both')
             win.after(100, invalid_data)
             win.after(2000, access_check_to_main)
     else:
         print(f'Info:\n{access_receive.text}\n')
-        print(f'RFID: {rfid_input}')
-        print(f'USER ID: {user_id}')
-        print(f'Access granted')
-        print('ACCESS GRANTED page\n')
+        print(f'Valid RFID: {rfid_input}\nUSER ID: {user_id}')
+        print(f'Access granted\nACCESS GRANTED page\n')
         level2_valid_page.pack_forget()
         access_granted_page.pack(expand = True, fill = 'both')
         win.after(100, valid_data)
@@ -478,32 +485,28 @@ def access_check(result):
 def face_add_rfid_read():
     global rfid_input, user_id
     rfid_input, _ = reader.read()
-    print(f'RFID: {rfid_input}')
-    print('Do not scan RFID card/tag')
-    print('Connecting to REST API Server')
-    print('Checking RFID\n')
+    print(f'RFID: {rfid_input}\nDo not scan RFID card/tag')
+    print('Connecting to REST API Server\nChecking RFID\n')
     rfid_error, rfid_recieve = face_add_rfid_check(rfid_input)
     if rfid_error:
-        print('NO CONNECTION TO API\n')
+        print('No connection to API\n')
         if os.path.exists(f'rfid/{rfid_input}.csv'):
-            print(f'Valid rfid: {rfid_input}')
+            print(f'Valid RFID: {rfid_input}')
             with open('id.csv', mode = 'r') as file:
                 id_reader = csv.reader(file)
                 for row in id_reader:
                     if row[1] == str(rfid_input):
                         user_id = row[0]
                         print(f'USER ID: {user_id}')
-            print('Pass face add security')
-            print('FACE ADD VALID page\n')
+            print('Pass level 1 security\nLEVEL 1 VALID page\n')
             face_add_rfid_input_page.pack_forget()
             face_add_valid_page.pack(expand = True, fill = 'both')
             win.after(100, valid_data)
             win.after(2000, face_add_add)
             win.after(3000, face_add_done)
         else:
-            print(f'Invalid rfid: {rfid_input}')
-            print('Not pass face add security')
-            print('FACE ADD INVALID page\n')
+            print(f'Invalid RFID: {rfid_input}\nUSER ID: N/A')
+            print('Not pass level 1 security\nLEVEL 1 INVALID page\n')
             face_add_rfid_input_page.pack_forget()
             face_add_invalid_page.pack(expand = True, fill = 'both')
             win.after(100, invalid_data)
@@ -511,10 +514,8 @@ def face_add_rfid_read():
     elif rfid_recieve:
         print(f'Info:\n{rfid_recieve.text}\n')
         user_id = json.loads(rfid_recieve.text).get('user_id', None)
-        print(f'Valid rfid: {rfid_input}')
-        print(f'USER ID: {user_id}')
-        print('Pass face add security')
-        print('FACE ADD VALID page\n')
+        print(f'Valid RFID: {rfid_input}\nUSER ID: {user_id}')
+        print('Pass level 1 security\nLEVEL 1 VALID page\n')
         face_add_rfid_input_page.pack_forget()
         face_add_valid_page.pack(expand = True, fill = 'both')
         win.after(100, valid_data)
@@ -522,9 +523,8 @@ def face_add_rfid_read():
         win.after(3000, face_add_done)
     else:       
         print(f'Info:\n{rfid_recieve.text}\n')
-        print(f'Invalid rfid: {rfid_input}')
-        print('Not pass face add security')
-        print('FACE ADD INVALID page\n')
+        print(f'Invalid RFID: {rfid_input}\nUSER ID: N/A')
+        print('Not pass level 1 security\nLEVEL 1 INVALID page\n')
         face_add_rfid_input_page.pack_forget()
         face_add_invalid_page.pack(expand = True, fill = 'both')
         win.after(100, invalid_data)
@@ -610,6 +610,9 @@ def face_add_add():
         writer = csv.writer(file)
         for vector in vectors:
             writer.writerow(vector.tolist())
+    end_time = get_current_time()
+    execution_time = end_time - start_time
+    print(f'FACE ADD ADD execution time: {execution_time} sec\n')
     print('Face add add, done\n')
 
 ''' MAIN '''
@@ -647,8 +650,7 @@ def pin():
     
 ''' PIN INPUT '''        
 def pin_input():
-    print('PIN page to PIN INPUT page')
-    print('PIN INPUT page\nPlease input PIN\n')
+    print('PIN page to PIN INPUT page\nPIN INPUT page\nPlease input PIN\n')
     pin_page.pack_forget()
     pin_input_page.pack(expand = True, fill = 'both')
 
@@ -663,8 +665,7 @@ def pin_input_to_main():
     global pin_input
     pin_input = ''
     pin_input_var.set('')
-    print(f'Clear input PIN')
-    print(f'PIN INPUT page to MAIN page\nMAIN page\n')
+    print('Clear input PIN\nPIN INPUT page to MAIN page\nMAIN page\n')
     pin_input_page.pack_forget()
     main()
     
@@ -676,8 +677,7 @@ def face_add():
     
 ''' FACE ADD RFID INPUT '''    
 def face_add_rfid_input():
-    print('FACE ADD to FACE ADD RFID INPUT page')
-    print('FACE ADD RFID INPUT page\nPlease input RFID card/tag\n')
+    print('FACE ADD to FACE ADD RFID INPUT page\nFACE ADD RFID INPUT page\nPlease input RFID card/tag\n')
     face_add_page.pack_forget()
     face_add_rfid_input_page.pack(expand = True, fill = 'both')
     win.after(100, face_add_rfid_read)
@@ -719,6 +719,12 @@ def face_scan():
 def face_scan_to_main():
     print('FACE SCAN page to MAIN page\nMAIN page\n')
     face_scan_page.pack_forget()
+    main()
+    
+''' FACE CHECK INVALID TO MAIN '''
+def face_check_invalid_to_main():
+    print('FACE CHECK INVALID page to MAIN page\nMAIN page\n')
+    face_check_invalid_page.pack_forget()
     main()
     
 ''' LEVEL 1 TO MAIN '''    
@@ -902,6 +908,13 @@ face_scan_page_b0 = tk.Button(face_scan_page, text = 'START', font = ('arial', 5
 face_scan_page_b0.pack(padx = 300, expand = True, fill = 'x')
 face_scan_page_b1 = tk.Button(face_scan_page, text = 'BACK', font = ('arial', 50), bg = 'black', fg = 'white', command = face_scan_to_main)
 face_scan_page_b1.pack(padx = 300, expand = True, fill = 'x')
+
+''' FACE CHECK INVALID DATA page '''
+face_check_invalid_page = tk.Frame(win)
+face_check_invalid_page_l0 = tk.Label(face_check_invalid_page, text = 'FACE CHECK\nINVALID', font = ('arial', 50))
+face_check_invalid_page_l0.pack()
+face_check_invalid_page_l2 = tk.Label(face_check_invalid_page, text = 'INVALID FACE DATABASE\nBACK TO MAIN WINDOW', font = ('arial', 50), bg = 'red', fg = 'white')
+face_check_invalid_page_l2.pack(expand = True)
 
 ''' LEVEL 2 VALID DATA page '''
 level2_valid_page = tk.Frame(win)
